@@ -1,0 +1,651 @@
+\documentclass[10pt]{article}
+
+\addtolength{\oddsidemargin}{-.875in}
+\addtolength{\evensidemargin}{-.875in}
+\addtolength{\textwidth}{1.75in}
+
+\addtolength{\topmargin}{-.875in}
+\addtolength{\textheight}{1.75in}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{listings}
+%\graphicspath{ {/home/user/images/} }
+\renewcommand{\baselinestretch}{0.97}
+\title{Youtube Database}
+\author {Ayush Gupta-2014CS50281\\Bipul Kumar-2014CS50282}
+
+\date{Due date: March 15, 2017, 11:55pm IST}
+
+\begin{document}
+	
+	\maketitle
+	
+	\section{Project Description}
+	Our project involves building a simple video library just like youtube. This was motivated by the vastness of youtube, how much content it can store and deliver at any time, despite its largeness how quick it serves and whether we can successfully emulate at least a bare-bones Youtube video library. \par
+	The complete system allows users directly to query videos from the creater's library. Users can like, dislike, comment to a video and even subscribe to a channel. Users can view a playlist of videos. They can customize their search to get videos with specific property like videos with view greater than 10000 etc. \par
+	Our system keeps track of all videos and channels statistics and reveal them in real time. \par
+	The entities \& attributes that were designed by us are shown in Table 1, while the ER Diagram corresponding to this is shown in Figure 1.
+	\begin{figure}[h]
+		\includegraphics[width=\textwidth]{erdiagram}
+		\centering
+		\caption{ER diagram}
+	\end{figure}
+\begin{table}[]
+	\centering
+	\caption{\textbf{List of Entities and Attributes}}
+	\label{my-label}
+	\begin{tabular}{|l|r|}
+		\hline
+		\textbf{Entity} & \textbf{Attributes} \\ \hline
+		videoid\_info & videoid,videotitle,channelid,publishedat,defaultaudiolanguage,duration,\\ & caption,viewcount,likecount,dislikecount,commentcount \\ \hline
+		channelid\_playlistid & playlistid,channelid \\ \hline
+		channelid\_channeltitle & channelid,channeltitle \\ \hline
+		channelid\_info & channelid,publishedat,country,subscribercount,videocount,viewcount,commentcount \\ \hline
+		playlist\_info & playlistid,playlisttitle,channelid,playlistvideocount \\ \hline
+		playlistid\_videoid & videoid,playlistid \\ \hline
+		commentid\_info & commentid,videoid,channelid,likeCount,publishedat \\ \hline
+		email\_password & email,password,permissions \\	\hline
+		email\_videoid\_comment & email,videoid,comment \\ \hline
+	\end{tabular}
+\end{table}
+\begin{table}[]
+	\centering
+	\caption{\textbf{Data type of attributes}}
+	\label{my-label}
+	\begin{tabular}{|l|c|}
+		\hline
+		\textbf{Attribute Name} & \textbf{Data Type} \\ \hline
+		videoid,videotitle,channelid,playlistid,  & varchar\\
+		channeltitle,playlisttitle,commentid,email,password, comment & \\ \hline
+		viewcount,playlistvideocount & bigint \\ \hline
+		publishedAt & timestamp \\ \hline
+		defaultaudiolanguage,country & char(10) \\ \hline
+		duration,likecount,dislikecount,commentcount,subscribercount,videocount,permissions & int \\ \hline
+		caption & boolean \\ \hline
+	\end{tabular}
+\end{table}
+
+	\section{Data Sources and Statistics}
+	We wrote our web crawlers in python to scrap data from \par
+	https://www.youtube.com/ \\
+	using youtube apis \par
+	https://www.googleapis.com/youtube/v3/channels \par
+	https://www.googleapis.com/youtube/v3/playlists \par
+	https://www.googleapis.com/youtube/v3/playlistItems \par
+	https://www.googleapis.com/youtube/v3/videos \par
+	https://www.googleapis.com/youtube/v3/commentThreads \par
+	This resulted into 4 tables, channelList, playlistList, videoList, commentList.
+	The code for crawlers is included in code section.
+	We cleaned this data using our c++ scripts to change the format of date and time into timestamp datatype of postgres. We also converted duration into seconds using python script. The code for the script is included in code section. \par
+	Initially the 4 raw tables had lots of redundancies. So we applied 1NF, 2NF, 3NF and BCNF rules. This resulted into 7 tables. Table schema and related information is included below. \par
+	
+	\textbf{ChannelList.csv}\\
+	The column names of the csv file are:
+	\begin{enumerate}
+		\item channelId
+		\item channelTitle
+		\item publishedAt
+		\item country
+		\item subscriberCount
+		\item videoCount
+		\item viewCount
+		\item commentCount
+		\item playlistId
+	\end{enumerate}
+	\begin{enumerate}
+		\item 1NF: It is already done due to diff row of playlist  and also because each element of each row is atomic.
+		\item 2NF: No split because Candidate key is playlistID alone, which uniquely determines a row.
+		\item 3NF: Split Table1 because Non-prime “Channel Title” or “ChannelId” determined other columns.\\
+		“Channel Title” and “ChannelId” also need to be kept separate as one of these will determine others.\\
+		Table1: channelId, playlistID\\
+		Table2: channelId,	channelTitle\\
+		Table3: channelId,	publishedAt,country, subscriberCount,videoCount
+		\item BCNF: It is satisfied because for each functional dependency, all the left terms are super keys in all the 3 tables.
+	\end{enumerate}
+
+	\textbf{PlaylistList.csv}\\
+	The column names of the csv file are:
+	\begin{enumerate}
+		\item playlistId
+		\item playlistTitle
+		\item playlistChannelId
+		\item playlistVideoCount
+		\item videoId
+	\end{enumerate}
+	\begin{enumerate}
+		\item 1NF: It is satisfied  because each element of each row is atomic.
+		\item 2NF: VideoId is the candidate key and it uniquely identifies a row.
+		\item 3NF: 
+		PlaylistID which is a non-prime attribute determines all other non-prime attributes\\
+		So we split the table into two tables:\\
+		Table1: playlistId	videoId\\
+		Table2: playlistId	playlistTitle	playlistChannelId	playlistVideoCount\\
+		playlistid\_videoid 
+		\item BCNF: It is satisfied because for each functional dependency, all the left terms are super keys in all the 3 tables.
+	\end{enumerate}
+
+	\textbf{VideoList.csv}\\
+	The column names of the csv file are:
+	\begin{enumerate}
+		\item videoId
+		\item videoTitle
+		\item channelId
+		\item publishedAt
+		\item defaultAudioLanguage
+		\item duration
+		\item caption
+		\item viewCount
+		\item likeCount
+		\item dislikeCount
+		\item commentCount
+	\end{enumerate}
+	\begin{enumerate}
+		\item 1NF: It is satisfied  because each element of each row is atomic.
+		\item 2NF: VideoID is the only candidate key and it uniquely identifies a row.
+		\item 3NF: It is satisfied because no non-prime attribute can determine any other column.
+		\item BCNF: It is satisfied because for each functional dependency, all the left terms are super keys in all the 3 tables as each superkey needs to have videoID.
+	\end{enumerate}
+
+	\textbf{CommentList}\\
+	The column names of the csv file are:
+	\begin{enumerate}
+		\item commentId
+		\item videoId
+		\item authorDisplayName
+		\item authorChannelId
+		\item likeCount
+		\item publishedAt
+	\end{enumerate}
+	\begin{enumerate}
+		\item 1NF: It is satisfied because each element of each row is atomic.
+		\item 2NF: commentID is the only candidate key and it uniquely identifies a row.
+		\item 3NF: “authorChannelId” which is non-prime can uniquely determine authorDisplayName. So split the table:\\
+		Table1: commentId	 videoId	authorChannelId	likeCount	publishedAt
+		Table2: authorChannelId		authorDisplayName
+		\item BCNF: It is satisfied because for each functional dependency, all the left terms are super keys in all the 3 tables as each superkey needs to have commentID.
+	\end{enumerate}
+
+\begin{table}[]
+	\centering
+	\caption{\textbf{Statistics}}
+	\label{my-label}
+	\begin{tabular}{|c|c|c|c|c|}
+		\hline
+		\textbf{Table Name} & \textbf{No. of Tuples} & \textbf{Time to load(ms)} & \textbf{Size of raw data} & \textbf{Size(raw data) post cleanup} \\ \hline
+		videoid\_info & 4108 & 127.746 & 1.5MB & 726KB \\ \hline
+		channelid\_playlistid & 3843 & 81.877 & 233.9KB & 229.4KB \\ \hline
+		channelid\_channeltitle & 1661 & 30.885 & 65.5KB & 65.5KB \\ \hline
+		channelid\_info & 129 & 20.648 & 10.4KB & 9.7KB \\ \hline
+		playlist\_info & 1148 & 36.268 & 89.1KB & 89.1KB \\ \hline
+		playlistid\_videoid & 4208 & 80.941 & 485.1KB & 423.5KB \\ \hline
+		commentid\_info & 1621 & 28.266 & 197KB & 155.8 \\ \hline
+		email\_password & 1 & - & - & - \\ \hline
+		email\_videoid\_comment & 1 & - & - & - \\ \hline
+	\end{tabular}
+\end{table}
+
+	\section{Functionality and Working}
+	\begin{enumerate}
+		\item User's view of the system
+		\begin{enumerate}
+			\item Home:\\
+			The front page consists of two options: register and login. 
+			If someone wants to create a new account he will click on register to signup, which if someone already has a account he will click on login button.
+			\item Register: \\
+			The register page asks user to enter email, password and permission(u,a). It checks for format of email. we have unique constraint with email field so already in use email will not work and it will ask user to enter different email id. If permission is "0", then its a regular user, "1" means the person is moderator. On successful register, user is sent back to Home page.\\
+			On registering, a insert query is sent to email\_password table to insert user details. Password is MD5 hashed and stored in table.
+			\item Login:\\
+			On login page user has to enter registered email and password. On pressing login button password is MD5 hashed and a query to verify email and hashed password is sent to the database. On successful login user is sent to Homepage and a Session variable. The database also checks the permission value which may be 0 or 1 and then saves the email and permission value in the Session variable.
+			\item Homepage:\\
+			For a logged in user, this page shows three options: "Search Video", "Search Playlist" and "Search Channel".
+			Clicking on the link redirects user to one of the pages from (Video Search Page, Playlist Search Page, Channel Search Page).\\
+			\item Video Search Page: \\
+			This page contains a list of boxes where user can make any combination of a query by twiking the boxes. On submitting a corresponding query is fired to the database and the list of videos are shown. Each of the videos are clickable which takes user to Video Page. On clicking the video a query is sent to database to get all fields of the video.
+			\item Video Page:\\
+			This page shows all information about a video. User can even comment, like and dislike the video. On submitting a new comment, the comment table is updated correspondingly. Also commentcount attribute of videoid\_info table is increased on submitting the comment.
+			\item Playlist Search Page: \\
+			This page contains a list of boxes where user can make any combination of a query by twiking the boxes. On submitting a corresponding query is fired to the database and the list of playlists are shown. Each of the playlists are clickable which takes user to playlist page. On clicking the playlist a query is sent to database to get all fields of the playlist which is displayed in playlist page.
+			\item Playlist Page:\\
+			This page shows all information about a playlist like its title, number of videos, name of channel where it belongs etc. This page also shows list of videos which belongs to this playlist. Clicking on a particular video will take the user to a corresponding video page which contain all details regarding to the video.
+			\item Channel Search Page: \\
+			This page contains a list of boxes where user can make any combination of a query by twiking the boxes. On submitting a corresponding query is fired to the database and the list of channels are shown. Each of the channels are clickable which takes user to Channel Page. On clicking the channel a query is sent to database to get all fields of the channel which is then shown in Channel Page.
+			\item Channel Page:\\
+			This page shows all information about a channel like channeltitle, channeld, publishing date, country, subscribercount, videocount, viewcount, commentcount. Channel page also lists all of its playlists. Clicking on a playlist takes the user to playlist page which contains all of the playlist's details and the list of videos in the playlist.
+			\item If the user is moderator then in the Video Page then he also gets the ability to modify any video title. On submitting, a query is sent to the database to change the title of the video. He can also comment on the video which is again inserted in email\_videoid\_comment table in the database and the comment count for the video is increased by 1. 
+			\item A user is identified by server using the session data which is created at the time of his login. So deleting the session data logs him out. All the webpages after login page will have a logout button at the top. Clicking the button will erase the session data from server and send the user to Home page.
+		\end{enumerate}
+		\item Special Functionality
+		\begin{enumerate}
+			\item Constraints:\\
+				Every table has primary key constraint, which inherently includes not null and unique value constraints. Apart from the primary key constraint, we have referential constraint and foreign key constraint on videoid attribute in videoid\_info \& email\_videoid\_comment tables. videoid is primary key in videoid\_info table while it is foreign key in email\_videoid\_comment table.
+			\item Indexing:\\
+				We were querying using videoid a lot our queries. And also videoid table is one of the largest table in our database. So for faster and efficient searching in our database, we indexed the table on videoid using B-Tree indexing. For this we used the below command:\\
+				CREATE INDEX videoid\_index ON videoid\_info (videoid);
+			\item Views:\\
+				We created a materialised view playlist\_info\_channel which is join on channelid between channelid\_channeltitle and playlist\_info, to easily access and display channeltitle along with playlist-info.\par
+				Create materialized view playlist\_info\_channel as
+				Select playlist\_info.*, channelid\_channeltitle.channeltitle from channelid\_channeltitle JOIN playlist\_info on channelid\_channeltitle.channelid=playlist\_info.channelid\\
+				We also created materialized view playlist\_videos\_info.\par
+				Create materialized view playlist\_videos\_info as
+				Select videoid\_info.*,playlistid\_videoid.playlistid
+				From playlistid\_videoid JOIN videoid\_info
+				On playlistid\_videoid.videoid=videoid\_info.videoid;\par
+				
+			\item Access Privileges:\\
+				We have implemented two user mode: normal and moderator.
+				Normal: This type of users can only search and view data. They can also comment on a video, which on submission, gets updated in videoid\_info table immediately.\\
+				Moderator: This user has all the permissions of a normal user. Apart from that he can also modify a videotitle which will be updated on submission immediately.
+			\item Triggers:
+				\begin{lstlisting}
+				create or replace function refresh_mat_view()
+				returns trigger language plpgsql
+				as $$
+				begin
+				refresh materialized view playlist_videos_info;
+				return null;
+				end $$;
+				
+				create trigger refresh_mat_view
+				after update
+				on videoid_info for each statement 
+				execute procedure refresh_mat_view();
+				\end{lstlisting}\par
+				We created this trigger to update the materialized view "playlist\_videos\_info" whenever a moderator changes a video title on Video\_Page.\\
+				The trigger basically keeps the View updated on "UPDATES" to videoid\_info Table.\\
+				As we don't provide functionality to update other things, hence the other materialized views don't need a trigger now.\\
+				Normalising our tables have saved us from making so many other triggers which could have been needed for resolving updation anomalies.
+		\end{enumerate}
+		\item List of Queries:\\
+		\begin{enumerate}
+			\item Register Page:
+			\begin{enumerate}
+				\item SELECT * from email\_password WHERE email='\$email'
+				\item INSERT INTO email\_password VALUES('\$email','\$hashed\_password','\$permission')
+			\end{enumerate}
+			\item Login:
+			\begin{enumerate}
+				\item SELECT * from email\_password WHERE email='\$email' AND password='\$hashed\_password'
+			\end{enumerate}
+			\item Video Search Page:
+			\begin{enumerate}
+				\item SELECT videoid,videotitle,viewcount FROM videoid\_info WHERE viewcount \textgreater= 0 AND viewcount\textless1300 AND viewcount\textgreater1400 AND duration\textgreater1100 AND  dislikecount\textgreater800 AND likecount\textgreater500 AND likecount=600 AND commentcount\textgreater200 ORDER BY viewcount
+				\item SELECT videoid,videotitle,viewcount FROM videoid\_info WHERE viewcount\textgreater=0 ORDER BY viewcount DESC
+				\item SELECT videoid,videotitle,viewcount FROM videoid\_info WHERE viewcount\textgreater=0 AND viewcount\textgreater200 ORDER BY viewcount DESC
+				\item SELECT videoid,videotitle,viewcount FROM videoid\_info WHERE viewcount\textgreater=0 AND viewcount\textgreater200 AND duration\textless300 ORDER BY viewcount DESC
+			\end{enumerate}
+			\item Video Page:
+			\begin{enumerate}
+				\item SELECT * from videoid\_info WHERE videoid='\$videoid'
+				\item SELECT * from channelid\_channeltitle WHERE channelid='\$row[channelid]'
+				\item SELECT * from playlistid\_videoid WHERE videoid='\$row[videoid]'
+				\item SELECT * from playlist\_info WHERE playlistid='\$row2[playlistid]'
+				\item SELECT * from email\_videoid\_comment WHERE videoid='\$row[videoid]'
+				\item INSERT INTO email\_videoid\_comment VALUES ('\$email\_comment','\$row[videoid]','\$comment\_text')
+				\item UPDATE videoid\_info SET commentcount='\$new\_comment\_count' WHERE videoid='\$row[videoid]'
+				\item UPDATE videoid\_info SET videotitle='\$new\_title' WHERE videoid='\$row[videoid]'
+			\end{enumerate}
+			\item Playlist Search Page:
+			\begin{enumerate}
+				\item Select * from playlist\_info where playlistvideocount\textgreater10 AND playlistvideocount\textless200
+				ORDER BY playlistvideocount DESC
+				\item Select * from playlist\_info where playlisttitle=’Vlog’ ORDER BY playlistvideocount
+				\item Select * from playlist\_info\_channel WHERE channeltitle=’\$channeltitlesearched’ ORDER BY plalistvideocount DESC
+			\end{enumerate}
+			\item Playlist Page:
+			\begin{enumerate}
+				\item Select * from playlist\_info\_channel;
+				\item select * from playlist\_videos\_info where playlist\_videos\_info.playlistid= ’\$playlistid\_current\_page’
+			\end{enumerate}
+			\item Channel Search Page:
+			\begin{enumerate}
+				\item Select * from channelid\_info where subscribercount\textgreater1000 AND videocount\textgreater1000 AND viewcount\textgreater10000 AND commentcount\textgreater2000 AND country=’US’ ORDER BY subscribercount
+				\item Select * from channelid\_info where viewcount\textless9090 AND commentcount\textgreater4200 ORDER BY videocount DESC
+			\end{enumerate}
+			\item Channel Page:
+			\begin{enumerate}
+				\item Select * from channelid\_info where channelid=’\$channelid\_current’;
+				\item Select * from channelid\_channeltitle where channelid=’\$channelid\_current’;
+				\item select * from playlist\_info\_channel where channelid=’\$channelid\_current’;
+			\end{enumerate}
+		\end{enumerate}
+		\begin{enumerate}
+			\item Query Running Time
+			\begin{table}[]
+				\centering
+				\caption{\textbf{Query Running Time}}
+				\label{my-label}
+				\begin{tabular}{|l|c|}
+					\hline
+					\textbf{Query Number} & \textbf{Average Running Time} \\ \hline
+					(a) i & 0.229 ms \\ \hline
+					(a) ii & 21.206 ms \\ \hline
+					(b) i & 0.261 ms \\ \hline
+					(c) i & 1.101 ms \\ \hline
+					(c) ii & 7.682 ms \\ \hline
+					(c) iii & 4.027 ms \\ \hline
+					(c) iv & 3.663 ms \\ \hline
+					(d) i & 0.372 ms \\ \hline
+					(d) ii & 0.278 ms \\ \hline
+					(d) iii & 0.222 ms \\ \hline
+					(d) iv & 0.288 ms \\ \hline
+					(d) v & 0.290 ms \\ \hline
+					(d) vi & 22.448 ms \\ \hline
+					(d) vii & 18.027 ms \\ \hline
+					(d) viii & 24.749 ms \\ \hline
+					(e) i & 0.455 ms \\ \hline
+					(e) ii & 0.564 ms \\ \hline
+					(e) iii & 0.410 ms \\ \hline
+					(f) i & 0.400 ms \\ \hline
+					(f) ii & 1.958 ms \\ \hline
+					(g) i & 0.379 ms \\ \hline
+					(g) ii & 0.339 ms \\ \hline
+					(h) i & 0.220 ms \\ \hline
+					(h) ii & 0.252 ms \\ \hline
+					(h) iii & 0.306 ms \\ \hline
+				\end{tabular}
+			\end{table}
+		\end{enumerate}
+	\end{enumerate}
+	
+	\section{Codes}
+	\subsection{Get info about Channel}
+	\begin{lstlisting}
+	channelUrl = "https://www.googleapis.com/youtube/v3/channels"
+	channelParam = {
+		"part": "id,snippet,statistics,contentOwnerDetails",
+		"key": "AIzaSyAIeT0DZSZPNgDlaS_3NsaOiMCmQcfI0kb"
+	}
+	for channel in channelList:
+		channelParam["id"] = channel
+		channelPage = requests.request(
+		method="get", url=channelUrl, params=channelParam)
+		channelPageJson = json.loads(channelPage.text)
+		channelId = channelPageJson["items"][0]["id"]
+		channelTitle = (channelPageJson["items"][0]["snippet"]["title"]
+		).encode(encoding='UTF-8')
+		publishedAt = channelPageJson["items"][0]["snippet"]["publishedAt"]
+		if "country" not in channelPageJson["items"][0]["snippet"]:
+			country = ""
+		else:
+			country = (channelPageJson["items"][0]["snippet"]["country"]
+			).encode(encoding='UTF-8')
+		subscriberCount = 
+		channelPageJson["items"][0]["statistics"]["subscriberCount"]
+		videoCount = channelPageJson["items"][0]["statistics"]["videoCount"]
+		viewCount = channelPageJson["items"][0]["statistics"]["viewCount"]
+		commentCount = channelPageJson["items"][0]["statistics"]["commentCount"]
+		playlistUrl = "https://www.googleapis.com/youtube/v3/playlists"
+		playlistParam = {
+			"part": "snippet,contentDetails",
+			"key": "AIzaSyAIeT0DZSZPNgDlaS_3NsaOiMCmQcfI0kc",
+			"maxResults": 50
+		}
+		playlistParam["channelId"] = channel
+		playlistPage = requests.request(
+		method="get", url=playlistUrl, params=playlistParam)
+		playlistPageJson = json.loads(playlistPage.text)
+		for item in playlistPageJson["items"]:
+			playlistId = item["id"]
+			channelCSVWriter.writerow([
+			channelId,channelTitle,publishedAt,country,subscriberCount,
+			videoCount,viewCount,commentCount,playlistId
+			])
+	channelCSV.close()
+	\end{lstlisting}
+	\subsection{Get info about Playlist}
+	\begin{lstlisting}
+	videoList = []
+	for channel in channelList:
+	
+		playlistUrl = "https://www.googleapis.com/youtube/v3/playlists"
+	playlistParam = {
+		"part": "snippet,contentDetails",
+		"key": "AIzaSyAIeT0DZSZPNgDlaS_3NsaOiMCmQcfI0kb",
+		"maxResults": 50
+	}
+	playlistParam["channelId"] = channel
+	playlistPage = 
+	requests.request(method="get", url=playlistUrl, params=playlistParam)
+	playlistPageJson = json.loads(playlistPage.text)
+	for item in playlistPageJson["items"]:
+		playlistId = item["id"]
+		playlistTitle = (
+		item["snippet"]["title"]).encode(encoding='UTF-8')
+		playlistChannelId = item["snippet"]["channelId"]
+		playlistVideoCount = item["contentDetails"]["itemCount"]
+	
+	playlistItemUrl = "https://www.googleapis.com/youtube/v3/playlistItems"
+	playlistItemParam = {
+		"part": "contentDetails",
+		"key": "AIzaSyAIeT0DZSZPNgDlaS_3NsaOiMCmQcfI0kc",
+		"maxResults": 50
+	}
+	playlistItemParam["playlistId"] = playlistId
+	playlistItemPage = 
+	requests.request(method="get", url=playlistItemUrl, params=playlistItemParam)
+	playlistItemPageJson = json.loads(playlistItemPage.text)
+	for videoItem in playlistItemPageJson["items"]:
+		videoId = videoItem["contentDetails"]["videoId"]
+		videoList.append(videoId)
+		playlistCSVWriter.writerow([
+		playlistId,playlistTitle,playlistChannelId,
+		playlistVideoCount,videoId])
+	
+	\end{lstlisting}
+	\subsection{Get info about Video}
+	\begin{lstlisting}
+	for video in videoList:
+		videoUrl = "https://www.googleapis.com/youtube/v3/videos"
+		videoParam = {
+		"part": "snippet,statistics,contentDetails",
+		"key": "AIzaSyAIeT0DZSZPNgDlaS_3NsaOiMCmQcfI0kb",
+		"maxResults": 50
+		}
+		videoParam["id"] = video
+		videoPage = 
+		requests.request(method="get", url=videoUrl, params=videoParam)
+		videoPageJson = json.loads(videoPage.text)
+		if len(videoPageJson["items"]) == 0:
+			continue
+		videoId = videoPageJson["items"][0]["id"]
+		videoTitle = (
+			videoPageJson["items"][0]["snippet"]["title"]
+			).encode(encoding='UTF-8')
+		channelId = videoPageJson["items"][0]["snippet"]["channelId"]
+		publishedAt = videoPageJson["items"][0]["snippet"]["publishedAt"]
+		if "defaultAudioLanguage" not in videoPageJson["items"][0]["snippet"]:
+			defaultAudioLanguage = "en"
+		else:
+			defaultAudioLanguage = videoPageJson["items"][0]["snippet"]
+			["defaultAudioLanguage"]
+		duration = videoPageJson["items"][0]["contentDetails"]["duration"]
+		caption = videoPageJson["items"][0]["contentDetails"]["caption"]
+		viewCount = videoPageJson["items"][0]["statistics"]["viewCount"]
+		if 'likeCount' not in videoPageJson["items"][0]["statistics"]:
+			likeCount = 0
+		else:
+			likeCount = videoPageJson["items"][0]["statistics"]["likeCount"]
+		if 'dislikeCount' not in videoPageJson["items"][0]["statistics"]:
+			dislikeCount = 0
+		else:
+		dislikeCount = videoPageJson["items"][0]["statistics"]["dislikeCount"]
+		if 'commentCount' not in videoPageJson["items"][0]["statistics"]:
+			commentCount = 0
+		else:
+		commentCount = videoPageJson["items"][0]["statistics"]["commentCount"]
+	
+		videoCSVWriter.writerow([
+		videoId,videoTitle,channelId,publishedAt,defaultAudioLanguage,
+		duration,caption,viewCount,likeCount,dislikeCount,commentCount
+		])
+	\end{lstlisting}
+	\subsection{Get info about Comment}
+	\begin{lstlisting}
+	commentUrl = "https://www.googleapis.com/youtube/v3/commentThreads"
+	commentParam = {
+		"part": "snippet",
+		"key": "AIzaSyAIeT0DZSZPNgDlaS_3NsaOiMCmQcfI0kb",
+		"maxResults": 50
+	}
+	j = 0
+	for video in videoList:
+		if j > 1000:
+			break
+		j+=1
+	commentParam["videoId"] = video
+	commentPage = requests.request(
+	method="get", url=commentUrl, params=commentParam
+	)
+	commentPageJson = json.loads(commentPage.text)
+	i = 0
+	if "items" not in commentPageJson:
+		continue
+	if (len(commentPageJson["items"]) == 0):
+		continue
+	for commentItem in commentPageJson["items"]:
+		if i > 1:
+			break
+		i+=1
+		commentId = commentItem["id"]
+		videoId = commentItem["snippet"]["videoId"]
+		authorDisplayName = (
+		commentItem["snippet"]["topLevelComment"]["snippet"]
+		["authorDisplayName"]
+		).encode(encoding='UTF-8')
+		authorChannelId = commentItem["snippet"]["topLevelComment"]
+		["snippet"]["authorChannelId"]["value"]
+		likeCount = commentItem["snippet"]["topLevelComment"]
+		["snippet"]["likeCount"]
+		publishedAt = commentItem["snippet"]["topLevelComment"]
+		["snippet"]["publishedAt"]
+		commentCSVWriter.writerow([
+		commentId,videoId,authorDisplayName,authorChannelId,
+		likeCount,publishedAt
+		])
+	\end{lstlisting}
+
+	\subsection{Cleanup Data}
+	\begin{itemize}
+		\item Timestamp
+	\begin{lstlisting}
+	vector<string> v;
+	void read_input()
+	{
+		ifstream infile;
+		infile.open("commentid_info_column_ahead.csv");
+		string dummy;
+		while(getline(infile,dummy))
+		{
+			v.push_back(dummy);
+		}
+		infile.close();
+	}
+		
+	void print_output()
+	{
+		ofstream outfile;
+		outfile.open("commentid_info_column_ahead_modified.csv");
+		for(int j=0;j<int(v.size());j++)	
+		{	
+			outfile<<v[j]<<endl;	
+		}
+		outfile.close();
+	}
+		
+		
+	int main()
+	{
+		read_input();
+		cout<<"Size is"<<int(v.size())<<endl;
+		for(int i=1;i<int(v.size());i++)
+		{
+			cout<<"for"<<i<<endl;
+			int first_comma=0;
+			string dummy="";
+			for(int j=0;j<int(v[i].length());j++)
+			{
+				if(v[i].at(j)==',')
+				{
+					first_comma=j;
+					dummy+=v[i].at(j);
+					break;
+				}
+				else
+				{
+					dummy+=v[i].at(j);
+				}
+			}
+		
+			for(int j=(first_comma+1);j<int(v[i].length());j++)
+			{
+				if(v[i].at(j)=='T')
+				{
+					dummy+=" ";
+					first_comma=j;
+					break;
+				}
+				else
+				{
+					dummy+=v[i].at(j);
+				}
+			}
+			for(int j=(first_comma+1);j<int(v[i].length());j++)
+			{
+				if(v[i].at(j)=='.')
+				{
+					first_comma=j;
+					break;
+				}
+				else
+				{
+					dummy+=v[i].at(j);
+			}
+		}
+		first_comma+=4;
+		for(int j=(first_comma+1);j<int(v[i].length());j++)
+		{
+			dummy+=v[i].at(j);
+		}
+		v[i]=dummy;
+	}
+	print_output();
+	return 0;
+	}
+	\end{lstlisting}
+		
+		\item Duration
+	\begin{lstlisting}
+	import isodate
+	fo = open("file_to_be_modified.csv")
+	a = 0
+	b = []
+	z = 1
+	for line in fo:
+		if z ==1:
+			z+=1
+			continue
+		temp = ""
+		for i in xrange(len(line)):
+			if line[i] != ",":
+				temp += line[i]
+			else:
+				a = i
+				break
+		dur=isodate.parse_duration(temp)
+		dur_in_sec = dur.total_seconds()
+		line = str(dur_in_sec) + line[a:]
+		b.append(line)
+	fo.close()
+	
+	
+	fw = open("file_to_be_modified.csv", "w")
+	
+	for line in b:
+		fw.write(str(b))
+	fw.close()
+	\end{lstlisting}
+	\end{itemize}
+	\centerline{End.}
+\end{document}
+
