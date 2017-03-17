@@ -1,3 +1,8 @@
+```
+#!Markdown
+
+
+```
 To make the application run
 1. Install Postgress
 2. Run the backup SQL file to recreate the database  
